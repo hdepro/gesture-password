@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no">
+    <title>升级云存储空间</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="main">
+    <div class="header">
+        <h4>升级云存储空间</h4>
+    </div>
+    <div class="content">
+        <canvas id="my-canvas"></canvas>
+        <div class="gesture"></div>
+        <h5 class="info">请输入手势密码</h5>
+    </div>
+    <div class="footer">
+        <form onchange="handleRadioChange(this)">
+            设置密码
+            <input type="radio" name="verify" value="set" checked="checked"/>
+            <!--name设置成一样才认为是属于一个form，radio才会互斥-->
+            <br/><br/>
+            输入密码
+            <input type="radio" name="verify" value="verify"/>
+        </form>
+    </div>
+</div>
+<script src="js/index.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+*{
+    box-sizing:border-box;
+    margin:0;
+}
+
+.header{
+    margin-top:0.3rem;
+    padding-bottom:0.3rem;
+    border-bottom:1px solid #ddd;
+    font-size:0.5rem;
+    text-align:center;
+}
+
+.content{
+    position:relative;
+}
+
+.circle{
+    display:inline-block;
+    width:1.6rem;
+    height:1.6rem;
+    margin-left:1.3rem;
+    margin-top:1.3rem;
+    border:0.1rem solid #ccc;
+    border-radius: 50%;
+    font-size:0;
+    line-height:1.45rem;   /*消除border带来的line-height的偏差*/
+    text-align:center;
+}
+
+.point{
+    display:inline-block;
+    width:0.3rem;
+    height:0.3rem;
+    border-radius: 50%;
+    background:#ccc;
+    vertical-align:middle;  /*与父元素的line-height合用才能使得非block元素垂直居中*/
+}
+
+#my-canvas{
+    position:absolute;
+    width:5.8rem;
+    height:5.8rem;
+    margin-left:2.1rem;
+    margin-top:2.1rem;
+}
+
+.info{
+    margin-top:1.3rem;
+    text-align:center;
+}
+
+.footer{
+    margin-top:1.3rem;
+    text-align:center;
+}
+
+label{
+    font-size:0.4rem;
+}
