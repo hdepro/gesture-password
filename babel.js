@@ -15,5 +15,34 @@ babel.transformFile("js/index.js", {
     fs.writeFileSync("build/index.js", result.code);
 });
 
+
 let http = require("http");
-http.createServer();
+let url = require("url");
+
+const server = http.createServer((request,response)=>{
+    const pathname=url.parse(request.url).pathname;
+    console.log(pathname);
+    pathname.splice(0,1);
+    console.log("splice",pathname);
+    if(pathname === ""){
+        fs.readFile('./index.html',(err,data)=>{
+            if(err) console.log("res err ",err);
+            else response.end(data);
+        });
+    }else{
+        fs.exists(pathname,(exist)=>{
+            console.log(exist);
+            if(exist){
+                fs.readFile(pathname,(err,data)=>{
+                    setTimeout(function(){response.end(data)},5000);
+                });
+            }else{
+                response.writeHead(404,'file is not exist',{"Content-Type":'text/html'});
+                response.end("<h1>404 Not Found</h1>");
+            }
+        });
+    }
+});
+
+server.listen(80);
+
