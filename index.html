@@ -19,16 +19,16 @@
     </div>
     <div class="footer">
         <form onchange="handleRadioChange(this)">
-            设置密码
-            <input type="radio" name="verify" value="set" checked="checked"/>
+            <label for="set">设置密码</label>
+            <input type="radio" name="verify" id="set" value="set" checked="checked"/>
             <!--name设置成一样才认为是属于一个form，radio才会互斥-->
             <br/><br/>
-            输入密码
-            <input type="radio" name="verify" value="verify"/>
+            <label for="verify">输入密码</label>
+            <input type="radio" name="verify" id="verify" value="verify"/>
         </form>
     </div>
 </div>
-<!--<script src="js/index.js"></script>-->
-<script src="build/index.js"></script>
+<script src="js/index.js"></script>
+<!--<script src="build/index.js"></script>-->
 </body>
 </html>

@@ -20,10 +20,10 @@ let http = require("http");
 let url = require("url");
 
 const server = http.createServer((request,response)=>{
-    const pathname=url.parse(request.url).pathname;
+    let pathname=url.parse(request.url).pathname;
     console.log(pathname);
-    pathname.splice(0,1);
-    console.log("splice",pathname);
+    pathname = pathname.slice(1);
+    console.log("slice",pathname);
     if(pathname === ""){
         fs.readFile('./index.html',(err,data)=>{
             if(err) console.log("res err ",err);

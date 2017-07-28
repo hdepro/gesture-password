@@ -45,33 +45,39 @@ const main = () =>{
 main();
 
 const calcPosition = (num) => {
-    let x = (circle_width + circle_left)*(num%3);
-    let y = (circle_width + circle_left)*parseInt(num/3);
+    let x = (canvas.width/2)*(num%3);
+    let y = (canvas.height/2)*parseInt(num/3);
     return {x, y};
 };
 
-const drawLine = (startPos,endPos) => {
+const drawLine = (startPos,endPos,globalCompositeOperation) => {
     ctx.beginPath();           // 开始路径绘制
     ctx.moveTo(startPos.x,startPos.y);
     ctx.lineTo(endPos.x,endPos.y,);
-    //console.log(startPos,endPos);
-    ctx.lineWidth = 1.0;
+    console.log(startPos,endPos);
+    ctx.lineWidth = 3.0;
     ctx.strokeStyle = "#CC0000";
+    if(globalCompositeOperation === "xor") {
+        ctx.globalCompositeOperation=globalCompositeOperation;
+        ctx.lineWidth += 2;
+        ctx.strokeStyle = "#ffffff";
+    }
     ctx.stroke();         // 进行线的着色，这时整条线才变得可见
 };
 
-const clearLine = () => {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+const clearLine = (startPos,endPos) => {
+        if(startPos) ctx.clearRect(startPos.x,startPos.y,endPos.x,endPos.y);
+        else ctx.clearRect(0,0,canvas.width,canvas.height);
 };
 
-const judgePointInCircle = ({x,y}) => {
-    let dx = x - offset.x;
-    let dy = y - offset.y;
+const judgePointInCircle = (point) => {   //这里顺便将传进来的点的x,y坐标格式化为画布的坐标
+    let dx,dy;
+    point.x -= offset.x;
+    point.y -= offset.y;
     for(let i=0;i<9;i++){
         let ci = calcPosition(i);
-        dx = x - offset.x -  ci.x;
-        dy = y - offset.y -  ci.y;
-        //console.log("judgePointInCircle dx,dy:",dx,dy,circle_width);
+        dx = point.x -  ci.x;
+        dy = point.y -  ci.y;
         if(dx*dx + dy*dy<=Math.pow(circle_width,2)/4){
             return i;
         }
@@ -79,8 +85,36 @@ const judgePointInCircle = ({x,y}) => {
     return -1;
 };
 
+const judgeBetweenTwoPoint = (one,two) => {
+    let onePoint = calcPosition(one);
+    let twoPoint = calcPosition(two);
+    let middle = (one + two)/2;
+    let mod = (one + two)%2;
+    console.log(onePoint,twoPoint);
+    if(mod === 0) {  //判断两个点的中间是否有点
+        let midPoint = calcPosition(middle);
+        if((midPoint.y - onePoint.y) * (twoPoint.x - midPoint.x)
+            === (midPoint.x - onePoint.x) * (twoPoint.y - midPoint.y)){
+            return middle;
+        }
+    }
+    return -1;
+};
+
+/*const obj = {x:1000,y:2000};
+console.log(obj);
+console.log(judgePointInCircle(obj));
+console.log(obj);*/
+
 let result = "";
-let prevPoint = {x:0,y:0,num:-1},currentPoint = {x:0,y:0,num:-1};
+let prevPoint = {x:0,y:0,num:-1},currentPoint = {x:0,y:0,num:-1},cachePoint = {x:0,y:0,num:-1};
+
+const repaintLine = () => {
+    for(let i=0;i<result.length-1;i++){
+        drawLine(calcPosition(result.charAt(i)),calcPosition(result.charAt(i+1)));
+    }
+};
+
 const gestureStart = (e)=>{
     result = "";
     let touch = e.touches[0];
@@ -100,18 +134,38 @@ const gestureMove = (e)=>{
     currentPoint.x =  touch.pageX;
     currentPoint.y =  touch.pageY;
     let judge = judgePointInCircle(currentPoint);
+    console.log("judgePointInCircle judge:",judge);
     //console.log("gestureMove:",judge);
-    if(judge >= 0 && !result.includes(judge)){
-        currentPoint.num = judge;
-        drawLine(calcPosition(prevPoint.num),calcPosition(currentPoint.num));
-        prevPoint.x = currentPoint.x;
-        prevPoint.y = currentPoint.y;
-        prevPoint.num = currentPoint.num;
-        result += judge;
+    if(!result.includes(judge)){     //判断是否路线中已经有这个点
+        //clearLine(prevPoint,{x:cachePoint.x+1,y:cachePoint.y+1});
+        clearLine();
+        //drawLine(prevPoint,cachePoint,"xor");
+        console.log("clearLine",prevPoint,cachePoint);
+        cachePoint.x = currentPoint.x;
+        cachePoint.y = currentPoint.y;
+        cachePoint.num = currentPoint.num;
+        if(judge>=0){
+            let middle = judgeBetweenTwoPoint(prevPoint.num,judge);
+            if(middle >= 0){
+                result += middle;
+            }
+            currentPoint.num = judge;
+            repaintLine();
+            drawLine(calcPosition(prevPoint.num),calcPosition(currentPoint.num));
+            prevPoint.x = currentPoint.x;
+            prevPoint.y = currentPoint.y;
+            prevPoint.num = currentPoint.num;
+            result += judge;
+        }else{
+            throttle(() => {
+                repaintLine();
+                drawLine(calcPosition(prevPoint.num),cachePoint);
+            },100);
+        }
     }
 };
 
-let type = "set",first_input="";
+let type = "set",first_input="",delay=1000;
 
 const getPassword = () => {
     if(!localStorage.getItem("password")){
@@ -126,19 +180,21 @@ const setPassword = (password) => {
 };
 
 const clear = () => {
-    clearLine();
+    setTimeout(clearLine,delay);
     first_input = "";
 };
 
 const gestureEnd = (e)=>{
     console.log("gestureEnd result:",result);
+    clearLine();
+    repaintLine();
     let radios = document.querySelectorAll("input[type=radio]");
     radios.forEach(radio => {
         if(radio.checked) type = radio.value;
     });
     if(result.length < 5){
         showInfo("密码长度太短，不能少于5位");
-        clearLine();
+        setTimeout(clearLine,delay);
         return;
     }
     if(type === "set"){
@@ -149,20 +205,20 @@ const gestureEnd = (e)=>{
                 clear();
             }else{
                 showInfo("两次输入密码不一致");
-                clearLine();
+                setTimeout(clearLine,delay);
             }
             return ;
         }
         showInfo("请确认手势密码");
-        clearLine();
+        setTimeout(clearLine,delay);
         first_input = result;
     }else if(type === "verify"){
         if(result === getPassword()){
             showInfo("密码验证成功！");
         }else{
             showInfo("输入的密码不正确");
-            clear();
         }
+        clear();
     }
 };
 
@@ -183,8 +239,8 @@ const throttle = (cb,delay) => {
 };
 
 content.addEventListener("touchstart",gestureStart);
-content.addEventListener("touchmove",throttle(gestureMove,20));
-content.addEventListener("touchend",gestureEnd);
+content.addEventListener("touchmove",throttle(gestureMove,10));
+content.addEventListener("touchend",throttle(gestureEnd,10));
 
 const handleRadioChange = (ele) => {
     clear();
