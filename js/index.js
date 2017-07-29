@@ -2,24 +2,10 @@
  * Created by heben.hb on 2017/7/26.
  */
 
-const throttle = (cb,delay) => {
-    let on = false;
-    return function(){
-        let context = this;
-        let args = arguments;
-        console.log("args",args);
-        if(!on){
-            on = true;
-            setTimeout(() => {
-                cb.call(context,args[0]);
-                on = false;
-            },delay)
-        }
-    }
-};
+//初始化整个页面以及canvas
 
 let device_width;
-const initFontSize = () => {
+const initFontSize = () => {    //通过rem方式完成适配
     device_width = document.documentElement.getBoundingClientRect().width;
     document.documentElement.style.fontSize = device_width/10+"px";
     document.body.style.fontSize = device_width/30+"px";
@@ -38,27 +24,44 @@ const initDom = () => {
     circle_width = document.querySelector(".circle").offsetWidth;
     circle_left = document.querySelector(".circle").offsetLeft;
 };
-let info = document.querySelector(".info");
-const showInfo = (msg) => {
-    info.innerText = msg;
-};
 
 let canvas,ctx,offset={};
 const initCanvas = () => {
     canvas = document.getElementById("my-canvas");
     ctx = canvas.getContext("2d");
-    canvas.width = canvas.offsetWidth;  //保证元素大小与画布表面大小一致
+    canvas.width = canvas.offsetWidth;     //保证元素大小与画布表面大小一致
     canvas.height = canvas.offsetHeight;
     offset.x = canvas.offsetLeft;
     offset.y = content.offsetTop+canvas.offsetTop;
 };
 
-const main = () =>{
+const init = () =>{
     initFontSize();
     initDom();
     initCanvas();
 };
-main();
+init();
+
+const throttle = (cb,delay) => {   //节流阀
+    let on = false;
+    return function(){
+        let context = this;
+        let args = arguments;
+        //console.log("args",args);
+        if(!on){
+            on = true;
+            setTimeout(() => {
+                cb.call(context,args[0]);
+                on = false;
+            },delay)
+        }
+    }
+};
+
+let info = document.querySelector(".info");
+const showInfo = (msg) => {
+    info.innerText = msg;
+};
 
 const calcPosition = (num) => {
     let x = (canvas.width/2)*(num%3);
@@ -74,7 +77,7 @@ const drawLine = (startPos,endPos,globalCompositeOperation) => {
     ctx.lineWidth = 1.0;
     ctx.strokeStyle = "#CC0000";
     if(globalCompositeOperation === "xor") {
-        ctx.globalCompositeOperation=globalCompositeOperation;
+        ctx.globalCompositeOperation = globalCompositeOperation;
         //ctx.lineWidth += 2;
         ctx.strokeStyle = "#ffffff";
     }
@@ -84,6 +87,12 @@ const drawLine = (startPos,endPos,globalCompositeOperation) => {
 const clearLine = (startPos,endPos) => {
         if(startPos) ctx.clearRect(startPos.x,startPos.y,endPos.x,endPos.y);
         else ctx.clearRect(0,0,canvas.width,canvas.height);
+};
+
+const repaintLine = () => {
+    for(let i=0;i<result.length-1;i++){
+        drawLine(calcPosition(result.charAt(i)),calcPosition(result.charAt(i+1)));
+    }
 };
 
 const judgePointInCircle = (point) => {   //这里顺便将传进来的点的x,y坐标格式化为画布的坐标
@@ -117,19 +126,14 @@ const judgeBetweenTwoPoint = (one,two) => {
     return -1;
 };
 
-/*const obj = {x:1000,y:2000};
-console.log(obj);
-console.log(judgePointInCircle(obj));
-console.log(obj);*/
+let circleDoms = document.getElementsByClassName("circle");
+const addTouchStyle = (num) => {
+    let dom = circleDoms[num];
+    dom && dom.classList.add("touch");
+};
 
 let result = "";
 let prevPoint = {x:0,y:0,num:-1},currentPoint = {x:0,y:0,num:-1},cachePoint = {x:0,y:0,num:-1};
-
-const repaintLine = () => {
-    for(let i=0;i<result.length-1;i++){
-        drawLine(calcPosition(result.charAt(i)),calcPosition(result.charAt(i+1)));
-    }
-};
 
 const gestureStart = (e)=>{
     console.log("gestureStart",new Date().getTime());
@@ -140,6 +144,7 @@ const gestureStart = (e)=>{
     prevPoint.y =  touch.pageY;
     let judge = judgePointInCircle(prevPoint);
     if(judge >= 0){
+        addTouchStyle(judge);
         prevPoint.num = judge;
         result += judge;
     }
@@ -161,6 +166,15 @@ const gestureMove = (e)=>{
         cachePoint.y = currentPoint.y;
         cachePoint.num = currentPoint.num;
         if(judge>=0){
+            if(result === ""){
+                addTouchStyle(judge);
+                prevPoint.x = currentPoint.x;
+                prevPoint.y = currentPoint.y;
+                prevPoint.num = judge;
+                result += judge;
+                return ;
+            }
+            addTouchStyle(judge);
             clearLine();
             let middle = judgeBetweenTwoPoint(prevPoint.num,judge);
             if(middle >= 0){
@@ -195,8 +209,13 @@ const setPassword = (password) => {
 };
 
 const clear = () => {
-    setTimeout(clearLine,delay);
-    first_input = "";
+    setTimeout(() => {
+        let domArray = Array.prototype.slice.call(circleDoms,0);
+        domArray.forEach(dom => {
+            dom.classList.remove("touch");    //清理圆盘上的触摸效果;
+        });
+        clearLine();
+    },delay);
 };
 
 const gestureEnd = (e)=>{
@@ -206,7 +225,7 @@ const gestureEnd = (e)=>{
     repaintLine();
     if(result.length < 5){
         showInfo("密码长度太短，不能少于5位");
-        setTimeout(clearLine,delay);
+        clear();
         return;
     }
     if(type === "set"){
@@ -214,15 +233,16 @@ const gestureEnd = (e)=>{
             if(result === first_input){
                 setPassword(result);
                 showInfo("设置密码成功！");
+                first_input = "";
                 clear();
             }else{
                 showInfo("两次输入密码不一致");
-                setTimeout(clearLine,delay);
+                clear();
             }
             return ;
         }
         showInfo("请确认手势密码");
-        setTimeout(clearLine,delay);
+        clear();
         first_input = result;
     }else if(type === "verify"){
         if(result === getPassword()){
@@ -241,6 +261,7 @@ content.addEventListener("touchmove",throttle(gestureMove,10));
 content.addEventListener("touchend",throttle(gestureEnd,10));
 
 const handleRadioChange = (ele) => {
+    first_input = "";
     clear();
     let radios = document.querySelectorAll("input[type=radio]");
     radios.forEach(radio => {

@@ -27,6 +27,10 @@
     line-height:1.45rem;   /*消除border带来的line-height的偏差*/
     text-align:center;
 }
+.circle.touch{
+    background:#99CCFF;
+    border:0.1rem solid #99CCFF;
+}
 
 .point{
     display:inline-block;

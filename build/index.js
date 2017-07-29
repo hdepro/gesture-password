@@ -4,24 +4,11 @@
  * Created by heben.hb on 2017/7/26.
  */
 
-var throttle = function throttle(cb, delay) {
-    var on = false;
-    return function () {
-        var context = this;
-        var args = arguments;
-        console.log("args", args);
-        if (!on) {
-            on = true;
-            setTimeout(function () {
-                cb.call(context, args[0]);
-                on = false;
-            }, delay);
-        }
-    };
-};
+//初始化整个页面以及canvas
 
 var device_width = void 0;
 var initFontSize = function initFontSize() {
+    //通过rem方式完成适配
     device_width = document.documentElement.getBoundingClientRect().width;
     document.documentElement.style.fontSize = device_width / 10 + "px";
     document.body.style.fontSize = device_width / 30 + "px";
@@ -41,10 +28,6 @@ var initDom = function initDom() {
     circle_width = document.querySelector(".circle").offsetWidth;
     circle_left = document.querySelector(".circle").offsetLeft;
 };
-var info = document.querySelector(".info");
-var showInfo = function showInfo(msg) {
-    info.innerText = msg;
-};
 
 var canvas = void 0,
     ctx = void 0,
@@ -58,12 +41,34 @@ var initCanvas = function initCanvas() {
     offset.y = content.offsetTop + canvas.offsetTop;
 };
 
-var main = function main() {
+var init = function init() {
     initFontSize();
     initDom();
     initCanvas();
 };
-main();
+init();
+
+var throttle = function throttle(cb, delay) {
+    //节流阀
+    var on = false;
+    return function () {
+        var context = this;
+        var args = arguments;
+        //console.log("args",args);
+        if (!on) {
+            on = true;
+            setTimeout(function () {
+                cb.call(context, args[0]);
+                on = false;
+            }, delay);
+        }
+    };
+};
+
+var info = document.querySelector(".info");
+var showInfo = function showInfo(msg) {
+    info.innerText = msg;
+};
 
 var calcPosition = function calcPosition(num) {
     var x = canvas.width / 2 * (num % 3);
@@ -88,6 +93,12 @@ var drawLine = function drawLine(startPos, endPos, globalCompositeOperation) {
 
 var clearLine = function clearLine(startPos, endPos) {
     if (startPos) ctx.clearRect(startPos.x, startPos.y, endPos.x, endPos.y);else ctx.clearRect(0, 0, canvas.width, canvas.height);
+};
+
+var repaintLine = function repaintLine() {
+    for (var i = 0; i < result.length - 1; i++) {
+        drawLine(calcPosition(result.charAt(i)), calcPosition(result.charAt(i + 1)));
+    }
 };
 
 var judgePointInCircle = function judgePointInCircle(point) {
@@ -123,21 +134,16 @@ var judgeBetweenTwoPoint = function judgeBetweenTwoPoint(one, two) {
     return -1;
 };
 
-/*const obj = {x:1000,y:2000};
-console.log(obj);
-console.log(judgePointInCircle(obj));
-console.log(obj);*/
+var circleDoms = document.getElementsByClassName("circle");
+var addTouchStyle = function addTouchStyle(num) {
+    var dom = circleDoms[num];
+    dom && dom.classList.add("touch");
+};
 
 var result = "";
 var prevPoint = { x: 0, y: 0, num: -1 },
     currentPoint = { x: 0, y: 0, num: -1 },
     cachePoint = { x: 0, y: 0, num: -1 };
-
-var repaintLine = function repaintLine() {
-    for (var i = 0; i < result.length - 1; i++) {
-        drawLine(calcPosition(result.charAt(i)), calcPosition(result.charAt(i + 1)));
-    }
-};
 
 var gestureStart = function gestureStart(e) {
     console.log("gestureStart", new Date().getTime());
@@ -148,6 +154,7 @@ var gestureStart = function gestureStart(e) {
     prevPoint.y = touch.pageY;
     var judge = judgePointInCircle(prevPoint);
     if (judge >= 0) {
+        addTouchStyle(judge);
         prevPoint.num = judge;
         result += judge;
     }
@@ -170,6 +177,15 @@ var gestureMove = function gestureMove(e) {
         cachePoint.y = currentPoint.y;
         cachePoint.num = currentPoint.num;
         if (judge >= 0) {
+            if (result === "") {
+                addTouchStyle(judge);
+                prevPoint.x = currentPoint.x;
+                prevPoint.y = currentPoint.y;
+                prevPoint.num = judge;
+                result += judge;
+                return;
+            }
+            addTouchStyle(judge);
             clearLine();
             var middle = judgeBetweenTwoPoint(prevPoint.num, judge);
             if (middle >= 0) {
@@ -206,8 +222,13 @@ var setPassword = function setPassword(password) {
 };
 
 var clear = function clear() {
-    setTimeout(clearLine, delay);
-    first_input = "";
+    setTimeout(function () {
+        var domArray = Array.prototype.slice.call(circleDoms, 0);
+        domArray.forEach(function (dom) {
+            dom.classList.remove("touch"); //清理圆盘上的触摸效果;
+        });
+        clearLine();
+    }, delay);
 };
 
 var gestureEnd = function gestureEnd(e) {
@@ -217,7 +238,7 @@ var gestureEnd = function gestureEnd(e) {
     repaintLine();
     if (result.length < 5) {
         showInfo("密码长度太短，不能少于5位");
-        setTimeout(clearLine, delay);
+        clear();
         return;
     }
     if (type === "set") {
@@ -225,15 +246,16 @@ var gestureEnd = function gestureEnd(e) {
             if (result === first_input) {
                 setPassword(result);
                 showInfo("设置密码成功！");
+                first_input = "";
                 clear();
             } else {
                 showInfo("两次输入密码不一致");
-                setTimeout(clearLine, delay);
+                clear();
             }
             return;
         }
         showInfo("请确认手势密码");
-        setTimeout(clearLine, delay);
+        clear();
         first_input = result;
     } else if (type === "verify") {
         if (result === getPassword()) {
@@ -251,6 +273,7 @@ content.addEventListener("touchmove", throttle(gestureMove, 10));
 content.addEventListener("touchend", throttle(gestureEnd, 10));
 
 var handleRadioChange = function handleRadioChange(ele) {
+    first_input = "";
     clear();
     var radios = document.querySelectorAll("input[type=radio]");
     radios.forEach(function (radio) {
