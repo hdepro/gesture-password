@@ -190,6 +190,7 @@ var gestureMove = function gestureMove(e) {
             var middle = judgeBetweenTwoPoint(prevPoint.num, judge);
             if (middle >= 0) {
                 result += middle;
+                addTouchStyle(middle);
             }
             currentPoint.num = judge;
             repaintLine();
@@ -275,7 +276,7 @@ content.addEventListener("touchend", throttle(gestureEnd, 10));
 var handleRadioChange = function handleRadioChange(ele) {
     first_input = "";
     clear();
-    var radios = document.querySelectorAll("input[type=radio]");
+    var radios = Array.prototype.slice.call(document.querySelectorAll("input[type=radio]"), 0);
     radios.forEach(function (radio) {
         if (radio.checked) type = radio.value;
     });

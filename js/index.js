@@ -179,6 +179,7 @@ const gestureMove = (e)=>{
             let middle = judgeBetweenTwoPoint(prevPoint.num,judge);
             if(middle >= 0){
                 result += middle;
+                addTouchStyle(middle);
             }
             currentPoint.num = judge;
             repaintLine();
@@ -263,7 +264,7 @@ content.addEventListener("touchend",throttle(gestureEnd,10));
 const handleRadioChange = (ele) => {
     first_input = "";
     clear();
-    let radios = document.querySelectorAll("input[type=radio]");
+    let radios = Array.prototype.slice.call(document.querySelectorAll("input[type=radio]"),0);
     radios.forEach(radio => {
         if(radio.checked) type = radio.value;
     });
