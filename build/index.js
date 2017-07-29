@@ -4,6 +4,22 @@
  * Created by heben.hb on 2017/7/26.
  */
 
+var throttle = function throttle(cb, delay) {
+    var on = false;
+    return function () {
+        var context = this;
+        var args = arguments;
+        console.log("args", args);
+        if (!on) {
+            on = true;
+            setTimeout(function () {
+                cb.call(context, args[0]);
+                on = false;
+            }, delay);
+        }
+    };
+};
+
 var device_width = void 0;
 var initFontSize = function initFontSize() {
     device_width = document.documentElement.getBoundingClientRect().width;
@@ -57,14 +73,14 @@ var calcPosition = function calcPosition(num) {
 
 var drawLine = function drawLine(startPos, endPos, globalCompositeOperation) {
     ctx.beginPath(); // 开始路径绘制
-    ctx.moveTo(startPos.x, startPos.y);
-    ctx.lineTo(endPos.x, endPos.y);
+    ctx.moveTo(startPos.x, startPos.y + 0.5);
+    ctx.lineTo(endPos.x, endPos.y + 0.5);
     console.log(startPos, endPos);
-    ctx.lineWidth = 3.0;
+    ctx.lineWidth = 1.0;
     ctx.strokeStyle = "#CC0000";
     if (globalCompositeOperation === "xor") {
         ctx.globalCompositeOperation = globalCompositeOperation;
-        ctx.lineWidth += 2;
+        //ctx.lineWidth += 2;
         ctx.strokeStyle = "#ffffff";
     }
     ctx.stroke(); // 进行线的着色，这时整条线才变得可见
@@ -124,6 +140,7 @@ var repaintLine = function repaintLine() {
 };
 
 var gestureStart = function gestureStart(e) {
+    console.log("gestureStart", new Date().getTime());
     result = "";
     var touch = e.touches[0];
     //console.log("gestureStart",touch);
@@ -147,13 +164,13 @@ var gestureMove = function gestureMove(e) {
     if (!result.includes(judge)) {
         //判断是否路线中已经有这个点
         //clearLine(prevPoint,{x:cachePoint.x+1,y:cachePoint.y+1});
-        clearLine();
         //drawLine(prevPoint,cachePoint,"xor");
-        console.log("clearLine", prevPoint, cachePoint);
+        clearLine();
         cachePoint.x = currentPoint.x;
         cachePoint.y = currentPoint.y;
         cachePoint.num = currentPoint.num;
         if (judge >= 0) {
+            clearLine();
             var middle = judgeBetweenTwoPoint(prevPoint.num, judge);
             if (middle >= 0) {
                 result += middle;
@@ -166,10 +183,8 @@ var gestureMove = function gestureMove(e) {
             prevPoint.num = currentPoint.num;
             result += judge;
         } else {
-            throttle(function () {
-                repaintLine();
-                drawLine(calcPosition(prevPoint.num), cachePoint);
-            }, 100);
+            repaintLine();
+            drawLine(calcPosition(prevPoint.num), cachePoint);
         }
     }
 };
@@ -197,6 +212,7 @@ var clear = function clear() {
 
 var gestureEnd = function gestureEnd(e) {
     console.log("gestureEnd result:", result);
+    console.log("gestureEnd", new Date().getTime());
     clearLine();
     repaintLine();
     var radios = document.querySelectorAll("input[type=radio]");
@@ -233,23 +249,8 @@ var gestureEnd = function gestureEnd(e) {
     }
 };
 
-var throttle = function throttle(cb, delay) {
-    var on = false;
-    return function () {
-        var context = this;
-        var args = arguments;
-        //console.log("args",args);
-        if (!on) {
-            on = true;
-            setTimeout(function () {
-                cb.call(context, args[0]);
-                on = false;
-            }, delay);
-        }
-    };
-};
-
 content.addEventListener("touchstart", gestureStart);
+//content.addEventListener("touchmove",gestureMove);
 content.addEventListener("touchmove", throttle(gestureMove, 10));
 content.addEventListener("touchend", throttle(gestureEnd, 10));
 

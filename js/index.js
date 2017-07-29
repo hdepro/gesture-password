@@ -2,6 +2,22 @@
  * Created by heben.hb on 2017/7/26.
  */
 
+const throttle = (cb,delay) => {
+    let on = false;
+    return function(){
+        let context = this;
+        let args = arguments;
+        console.log("args",args);
+        if(!on){
+            on = true;
+            setTimeout(() => {
+                cb.call(context,args[0]);
+                on = false;
+            },delay)
+        }
+    }
+};
+
 let device_width;
 const initFontSize = () => {
     device_width = document.documentElement.getBoundingClientRect().width;
@@ -53,13 +69,13 @@ const calcPosition = (num) => {
 const drawLine = (startPos,endPos,globalCompositeOperation) => {
     ctx.beginPath();           // 开始路径绘制
     ctx.moveTo(startPos.x,startPos.y);
-    ctx.lineTo(endPos.x,endPos.y,);
+    ctx.lineTo(endPos.x,endPos.y);
     console.log(startPos,endPos);
-    ctx.lineWidth = 3.0;
+    ctx.lineWidth = 1.0;
     ctx.strokeStyle = "#CC0000";
     if(globalCompositeOperation === "xor") {
         ctx.globalCompositeOperation=globalCompositeOperation;
-        ctx.lineWidth += 2;
+        //ctx.lineWidth += 2;
         ctx.strokeStyle = "#ffffff";
     }
     ctx.stroke();         // 进行线的着色，这时整条线才变得可见
@@ -116,6 +132,7 @@ const repaintLine = () => {
 };
 
 const gestureStart = (e)=>{
+    console.log("gestureStart",new Date().getTime());
     result = "";
     let touch = e.touches[0];
     //console.log("gestureStart",touch);
@@ -138,13 +155,13 @@ const gestureMove = (e)=>{
     //console.log("gestureMove:",judge);
     if(!result.includes(judge)){     //判断是否路线中已经有这个点
         //clearLine(prevPoint,{x:cachePoint.x+1,y:cachePoint.y+1});
-        clearLine();
         //drawLine(prevPoint,cachePoint,"xor");
-        console.log("clearLine",prevPoint,cachePoint);
+        clearLine();
         cachePoint.x = currentPoint.x;
         cachePoint.y = currentPoint.y;
         cachePoint.num = currentPoint.num;
         if(judge>=0){
+            clearLine();
             let middle = judgeBetweenTwoPoint(prevPoint.num,judge);
             if(middle >= 0){
                 result += middle;
@@ -157,10 +174,8 @@ const gestureMove = (e)=>{
             prevPoint.num = currentPoint.num;
             result += judge;
         }else{
-            throttle(() => {
-                repaintLine();
-                drawLine(calcPosition(prevPoint.num),cachePoint);
-            },100);
+            repaintLine();
+            drawLine(calcPosition(prevPoint.num),cachePoint);
         }
     }
 };
@@ -186,12 +201,9 @@ const clear = () => {
 
 const gestureEnd = (e)=>{
     console.log("gestureEnd result:",result);
+    console.log("gestureEnd",new Date().getTime());
     clearLine();
     repaintLine();
-    let radios = document.querySelectorAll("input[type=radio]");
-    radios.forEach(radio => {
-        if(radio.checked) type = radio.value;
-    });
     if(result.length < 5){
         showInfo("密码长度太短，不能少于5位");
         setTimeout(clearLine,delay);
@@ -222,26 +234,21 @@ const gestureEnd = (e)=>{
     }
 };
 
-const throttle = (cb,delay) => {
-    let on = false;
-    return function(){
-        let context = this;
-        let args = arguments;
-        //console.log("args",args);
-        if(!on){
-            on = true;
-            setTimeout(() => {
-                cb.call(context,args[0]);
-                on = false;
-            },delay)
-        }
-    }
-};
 
 content.addEventListener("touchstart",gestureStart);
+//content.addEventListener("touchmove",gestureMove);
 content.addEventListener("touchmove",throttle(gestureMove,10));
 content.addEventListener("touchend",throttle(gestureEnd,10));
 
 const handleRadioChange = (ele) => {
     clear();
+    let radios = document.querySelectorAll("input[type=radio]");
+    radios.forEach(radio => {
+        if(radio.checked) type = radio.value;
+    });
+    if(type === "set") {
+        showInfo("请设置手势密码");
+    }else{
+        showInfo("请输入手势密码");
+    }
 };
