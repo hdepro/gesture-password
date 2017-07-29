@@ -73,8 +73,8 @@ var calcPosition = function calcPosition(num) {
 
 var drawLine = function drawLine(startPos, endPos, globalCompositeOperation) {
     ctx.beginPath(); // 开始路径绘制
-    ctx.moveTo(startPos.x, startPos.y + 0.5);
-    ctx.lineTo(endPos.x, endPos.y + 0.5);
+    ctx.moveTo(startPos.x, startPos.y);
+    ctx.lineTo(endPos.x, endPos.y);
     console.log(startPos, endPos);
     ctx.lineWidth = 1.0;
     ctx.strokeStyle = "#CC0000";
@@ -215,10 +215,6 @@ var gestureEnd = function gestureEnd(e) {
     console.log("gestureEnd", new Date().getTime());
     clearLine();
     repaintLine();
-    var radios = document.querySelectorAll("input[type=radio]");
-    radios.forEach(function (radio) {
-        if (radio.checked) type = radio.value;
-    });
     if (result.length < 5) {
         showInfo("密码长度太短，不能少于5位");
         setTimeout(clearLine, delay);
@@ -256,4 +252,13 @@ content.addEventListener("touchend", throttle(gestureEnd, 10));
 
 var handleRadioChange = function handleRadioChange(ele) {
     clear();
+    var radios = document.querySelectorAll("input[type=radio]");
+    radios.forEach(function (radio) {
+        if (radio.checked) type = radio.value;
+    });
+    if (type === "set") {
+        showInfo("请设置手势密码");
+    } else {
+        showInfo("请输入手势密码");
+    }
 };
