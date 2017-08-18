@@ -34,7 +34,7 @@ const server = http.createServer((request,response)=>{
             console.log(exist);
             if(exist){
                 fs.readFile(pathname,(err,data)=>{
-                    setTimeout(function(){response.end(data)},5000);
+                    response.end(data);
                 });
             }else{
                 response.writeHead(404,'file is not exist',{"Content-Type":'text/html'});
