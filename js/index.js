@@ -3,6 +3,13 @@
  */
 
 //初始化整个页面以及canvas
+let PASSWORD_DIFFER = "两次输入密码不一致";
+let PASSWORD_SHORT = "密码长度太短，不能少于5位";
+let PASSWORD_ERROR = "输入的密码不正确";
+let SET_SUCCESS = "设置密码成功！";
+let VERIFY_SUCCESS = "密码验证成功！";
+let CONFIRM_PASSWORD = "请确认手势密码";
+let MESSAGE_DELAY = 2000;   //通知的显示时间
 
 let device_width;
 const initFontSize = () => {    //通过rem方式完成适配
@@ -42,25 +49,16 @@ const init = () =>{
 };
 init();
 
-const throttle = (cb,delay) => {   //节流阀
-    let on = false;
-    return function(){
-        let context = this;
-        let args = arguments;
-        //console.log("args",args);
-        if(!on){
-            on = true;
-            setTimeout(() => {
-                cb.call(context,args[0]);
-                on = false;
-            },delay)
-        }
-    }
-};
-
 let info = document.querySelector(".info");
+let message = document.querySelector(".message");
 const showInfo = (msg) => {
     info.innerText = msg;
+};
+const showMessage = (msg) => {
+    message.innerText = msg;
+    setTimeout(() => {
+        message.innerText = "";
+    },MESSAGE_DELAY);
 };
 
 const calcPosition = (num) => {
@@ -219,13 +217,14 @@ const clear = () => {
     },delay);
 };
 
+
 const gestureEnd = (e)=>{
     console.log("gestureEnd result:",result);
     console.log("gestureEnd",new Date().getTime());
     clearLine();
     repaintLine();
     if(result.length < 5){
-        showInfo("密码长度太短，不能少于5位");
+        showMessage(PASSWORD_SHORT);
         clear();
         return;
     }
@@ -233,33 +232,35 @@ const gestureEnd = (e)=>{
         if(first_input){
             if(result === first_input){
                 setPassword(result);
-                showInfo("设置密码成功！");
+                showMessage(SET_SUCCESS);
                 first_input = "";
                 clear();
             }else{
-                showInfo("两次输入密码不一致");
+                showMessage(PASSWORD_DIFFER);
                 clear();
             }
             return ;
         }
-        showInfo("请确认手势密码");
+        showMessage(CONFIRM_PASSWORD);
         clear();
         first_input = result;
     }else if(type === "verify"){
         if(result === getPassword()){
-            showInfo("密码验证成功！");
+            showMessage(VERIFY_SUCCESS);
         }else{
-            showInfo("输入的密码不正确");
+            showMessage(PASSWORD_ERROR);
         }
         clear();
     }
 };
 
-
+content.addEventListener("click",function(){
+    console.log("content click");
+});
 content.addEventListener("touchstart",gestureStart);
 //content.addEventListener("touchmove",gestureMove);
-content.addEventListener("touchmove",throttle(gestureMove,10));
-content.addEventListener("touchend",throttle(gestureEnd,10));
+content.addEventListener("touchmove",gestureMove);
+content.addEventListener("touchend",gestureEnd);
 
 const handleRadioChange = (ele) => {
     first_input = "";
@@ -274,3 +275,19 @@ const handleRadioChange = (ele) => {
         showInfo("请输入手势密码");
     }
 };
+
+// const throttle = (cb,delay) => {   //节流阀
+//     let on = false;
+//     return function(){
+//         let context = this;
+//         let args = arguments;
+//         //console.log("args",args);
+//         if(!on){
+//             on = true;
+//             setTimeout(() => {
+//                 cb.call(context,args[0]);
+//                 on = false;
+//             },delay)
+//         }
+//     }
+// };
