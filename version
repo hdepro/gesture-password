@@ -1,0 +1,2 @@
+# 解决touchstart等事件在微信以及其他浏览器上不能触发的问题
+原因是使用了字符串的includes方法(属于es6),babel不会转这种api，需要引入babel-polyfill

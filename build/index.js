@@ -11,7 +11,7 @@ var PASSWORD_ERROR = "输入的密码不正确";
 var SET_SUCCESS = "设置密码成功！";
 var VERIFY_SUCCESS = "密码验证成功！";
 var CONFIRM_PASSWORD = "请确认手势密码";
-var MESSAGE_DELAY = 2000; //通知的显示时间
+var MESSAGE_DELAY = 1000; //通知的显示时间
 
 var device_width = void 0;
 var initFontSize = function initFontSize() {
@@ -22,7 +22,7 @@ var initFontSize = function initFontSize() {
 };
 
 var content = document.querySelector(".content");
-var gesture = document.querySelector(".content .gesture");
+var gesture = content.querySelector(".gesture");
 var circle_width = void 0,
     circle_left = void 0;
 
@@ -67,11 +67,16 @@ var showMessage = function showMessage(msg) {
     }, MESSAGE_DELAY);
 };
 
-var calcPosition = function calcPosition(num) {
-    var x = canvas.width / 2 * (num % 3);
-    var y = canvas.height / 2 * parseInt(num / 3);
-    return { x: x, y: y };
+var _memoizeCalcPosition = function _memoizeCalcPosition() {
+    var res = [];
+    return function (num) {
+        if (res[num]) return res[num];
+        var x = canvas.width / 2 * (num % 3);
+        var y = canvas.height / 2 * parseInt(num / 3);
+        return res[num] = { x: x, y: y };
+    };
 };
+var calcPosition = _memoizeCalcPosition();
 
 var drawLine = function drawLine(startPos, endPos, globalCompositeOperation) {
     ctx.beginPath(); // 开始路径绘制
@@ -115,36 +120,21 @@ var judgePointInCircle = function judgePointInCircle(point) {
     return -1;
 };
 
-var judgeBetweenTwoPoint = function judgeBetweenTwoPoint(one, two) {
-    var onePoint = calcPosition(one);
-    var twoPoint = calcPosition(two);
-    var middle = (one + two) / 2;
-    var mod = (one + two) % 2;
-    console.log(onePoint, twoPoint);
-    if (mod === 0) {
-        //判断两个点的中间是否有点
-        var midPoint = calcPosition(middle);
-        if ((midPoint.y - onePoint.y) * (twoPoint.x - midPoint.x) === (midPoint.x - onePoint.x) * (twoPoint.y - midPoint.y)) {
-            return middle;
-        }
-    }
-    return -1;
-};
-
 var circleDoms = document.getElementsByClassName("circle");
 var addTouchStyle = function addTouchStyle(num) {
     var dom = circleDoms[num];
     dom && dom.classList.add("touch");
 };
 
-var result = "";
+var result = "",
+    touching = false;
 var prevPoint = { x: 0, y: 0, num: -1 },
-    currentPoint = { x: 0, y: 0, num: -1 },
-    cachePoint = { x: 0, y: 0, num: -1 };
+    currentPoint = { x: 0, y: 0, num: -1 };
 
 var gestureStart = function gestureStart(e) {
     console.log("gestureStart", new Date().getTime());
     result = "";
+    if (touching) return;
     var touch = e.touches[0];
     //console.log("gestureStart",touch);
     prevPoint.x = touch.pageX;
@@ -158,6 +148,7 @@ var gestureStart = function gestureStart(e) {
 };
 
 var gestureMove = function gestureMove(e) {
+    if (touching) return;
     var touch = e.touches[0];
     //console.log(touch);
     currentPoint.x = touch.pageX;
@@ -165,14 +156,11 @@ var gestureMove = function gestureMove(e) {
     var judge = judgePointInCircle(currentPoint);
     console.log("judgePointInCircle judge:", judge);
     //console.log("gestureMove:",judge);
-    if (!result.includes(judge)) {
+    if (result.indexOf(judge) === -1) {
         //判断是否路线中已经有这个点
         //clearLine(prevPoint,{x:cachePoint.x+1,y:cachePoint.y+1});
         //drawLine(prevPoint,cachePoint,"xor");
         clearLine();
-        cachePoint.x = currentPoint.x;
-        cachePoint.y = currentPoint.y;
-        cachePoint.num = currentPoint.num;
         if (judge >= 0) {
             if (result === "") {
                 addTouchStyle(judge);
@@ -183,12 +171,11 @@ var gestureMove = function gestureMove(e) {
                 return;
             }
             addTouchStyle(judge);
-            clearLine();
-            var middle = judgeBetweenTwoPoint(prevPoint.num, judge);
-            if (middle >= 0) {
+            /*let middle = judgeBetweenTwoPoint(prevPoint.num,judge);
+            if(middle >= 0){
                 result += middle;
                 addTouchStyle(middle);
-            }
+            }*/
             currentPoint.num = judge;
             repaintLine();
             drawLine(calcPosition(prevPoint.num), calcPosition(currentPoint.num));
@@ -196,16 +183,15 @@ var gestureMove = function gestureMove(e) {
             prevPoint.y = currentPoint.y;
             prevPoint.num = currentPoint.num;
             result += judge;
-        } else {
+        } else if (result.length > 0) {
             repaintLine();
-            drawLine(calcPosition(prevPoint.num), cachePoint);
+            drawLine(calcPosition(prevPoint.num), currentPoint);
         }
     }
 };
 
 var type = "set",
-    first_input = "",
-    delay = 1000;
+    first_input = "";
 
 var getPassword = function getPassword() {
     if (!localStorage.getItem("password")) {
@@ -220,23 +206,26 @@ var setPassword = function setPassword(password) {
 };
 
 var clear = function clear() {
+    touching = true;
     setTimeout(function () {
         var domArray = Array.prototype.slice.call(circleDoms, 0);
         domArray.forEach(function (dom) {
             dom.classList.remove("touch"); //清理圆盘上的触摸效果;
         });
         clearLine();
-    }, delay);
+        touching = false;
+    }, MESSAGE_DELAY);
 };
 
 var gestureEnd = function gestureEnd(e) {
     console.log("gestureEnd result:", result);
     console.log("gestureEnd", new Date().getTime());
+    if (result.length === 0) return;
     clearLine();
     repaintLine();
+    clear();
     if (result.length < 5) {
         showMessage(PASSWORD_SHORT);
-        clear();
         return;
     }
     if (type === "set") {
@@ -244,16 +233,12 @@ var gestureEnd = function gestureEnd(e) {
             if (result === first_input) {
                 setPassword(result);
                 showMessage(SET_SUCCESS);
-                first_input = "";
-                clear();
             } else {
                 showMessage(PASSWORD_DIFFER);
-                clear();
             }
             return;
         }
         showMessage(CONFIRM_PASSWORD);
-        clear();
         first_input = result;
     } else if (type === "verify") {
         if (result === getPassword()) {
@@ -261,21 +246,15 @@ var gestureEnd = function gestureEnd(e) {
         } else {
             showMessage(PASSWORD_ERROR);
         }
-        clear();
     }
 };
 
-content.addEventListener("click", function () {
-    console.log("content click");
-});
 content.addEventListener("touchstart", gestureStart);
-//content.addEventListener("touchmove",gestureMove);
 content.addEventListener("touchmove", gestureMove);
 content.addEventListener("touchend", gestureEnd);
 
 var handleRadioChange = function handleRadioChange(ele) {
     first_input = "";
-    clear();
     var radios = Array.prototype.slice.call(document.querySelectorAll("input[type=radio]"), 0);
     radios.forEach(function (radio) {
         if (radio.checked) type = radio.value;
@@ -287,18 +266,23 @@ var handleRadioChange = function handleRadioChange(ele) {
     }
 };
 
-// const throttle = (cb,delay) => {   //节流阀
-//     let on = false;
-//     return function(){
-//         let context = this;
-//         let args = arguments;
-//         //console.log("args",args);
-//         if(!on){
-//             on = true;
-//             setTimeout(() => {
-//                 cb.call(context,args[0]);
-//                 on = false;
-//             },delay)
+// window.addEventListener("load",function(){
+//     console.log("loaded");
+// });
+// console.log("index js finished");
+
+// const judgeBetweenTwoPoint = (one,two) => {
+//     let onePoint = calcPosition(one);
+//     let twoPoint = calcPosition(two);
+//     let middle = (one + two)/2;
+//     let mod = (one + two)%2;
+//     console.log(onePoint,twoPoint);
+//     if(mod === 0) {  //判断两个点的中间是否有点
+//         let midPoint = calcPosition(middle);
+//         if((midPoint.y - onePoint.y) * (twoPoint.x - midPoint.x)
+//             === (midPoint.x - onePoint.x) * (twoPoint.y - midPoint.y)){
+//             return middle;
 //         }
 //     }
+//     return -1;
 // };
